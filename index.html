@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title> Slot Machine</title>
+  <style>
+    body { margin: 0; background: #222; color: white; font-family: Arial; text-align: center; }
+    button, input { font-size: 18px; margin: 8px; padding: 8px 12px; }
+    canvas { border: 2px solid #eccc68; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1> Slot Machine</h1>
+  <label>Panosta: <input id="bet-input" type="number" min="1" max="100" value="10"></label>
+  <button id="spin-btn">Pyöräytä</button>
+  <button id="pause-btn">Tauko / Jatka</button>
+  <div id="balance">Saldo: 1000</div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
