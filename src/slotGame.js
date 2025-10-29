@@ -7,13 +7,12 @@ export class SlotGame {
     this.symbols = symbols;
     this.reels = [];
     this.balance = 1000;
-    this.bet = 1;
-    this.rows = 5;
+    this.bet = 10;
+    this.rows = 3;
     this.cols = 5;
     this.isSpinning = false;
 
-    this.stats = { totalSpins: 0, totalWagered: 0, totalWon: 0, rtp: 0 };
-
+    // UI
     this.rtpText = new PIXI.Text({
       text: 'RTP: 0%',
       style: new PIXI.TextStyle({ fontSize: 24, fill: 'white' }),
@@ -31,18 +30,18 @@ export class SlotGame {
 
   init() {
     for (let col = 0; col < this.cols; col++) {
-      for (let row = 0; row < this.rows; row++) {
-        const reel = new Reel(this.symbols, this.app);
-        reel.container.x = col * 120;
-        reel.container.y = 150 + row * 100;
-        this.app.stage.addChild(reel.container);
-        this.reels.push(reel);
-      }
+      const reel = new Reel(this.symbols, this.rows, 100, 120);
+      reel.container.x = col * 120;
+      reel.container.y = 150;
+      this.app.stage.addChild(reel.container);
+      this.reels.push(reel);
     }
   }
 
   setBet(amount) {
-    if (amount > 0 && amount <= this.balance && !this.isSpinning) this.bet = amount;
+    if (!this.isSpinning && amount > 0 && amount <= this.balance) {
+      this.bet = amount;
+    }
   }
 
   async spin() {
@@ -54,33 +53,29 @@ export class SlotGame {
     this.isSpinning = true;
     this.balance -= this.bet;
     this.updateBalanceDisplay();
-    this.updateStats(this.bet, 0);
 
+    // Arvo lopputulokset jokaiselle kelalle
     const results = [];
     for (let i = 0; i < this.cols; i++) {
       results[i] = Array.from({ length: this.rows }, () => this.symbols[Math.floor(Math.random() * this.symbols.length)]);
     }
 
     await Promise.all(
-      this.reels.map((reel, i) =>
-        reel.spin(results[i % this.cols])
-      )
+      this.reels.map((reel, i) => reel.spin(results[i]))
     );
 
+    // Palkintojen jako
     let winAmount = 0;
     const paylines = [
       [0, 0, 0, 0, 0],
       [1, 1, 1, 1, 1],
       [2, 2, 2, 2, 2],
-      [3, 3, 3, 3, 3],
-      [4, 4, 4, 4, 4],
     ];
 
     paylines.forEach((line) => {
       const lineSymbols = line.map((row, col) => results[col][row]);
       if (lineSymbols.every((s) => s === lineSymbols[0])) {
-        winAmount += this.bet * 10;
-        this.reels.forEach((r) => r.highlight(lineSymbols[0]));
+        winAmount += this.bet * 5;
       }
     });
 
@@ -89,16 +84,7 @@ export class SlotGame {
       this.updateBalanceDisplay();
     }
 
-    this.updateStats(0, winAmount);
     this.isSpinning = false;
-  }
-
-  updateStats(wager, win) {
-    this.stats.totalSpins++;
-    this.stats.totalWagered += wager;
-    this.stats.totalWon += win;
-    this.stats.rtp = this.stats.totalWagered > 0 ? (this.stats.totalWon / this.stats.totalWagered) * 100 : 0;
-    this.rtpText.text = `RTP: ${this.stats.rtp.toFixed(2)}%`;
   }
 
   updateBalanceDisplay() {
