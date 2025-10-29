@@ -1,4 +1,4 @@
-# pixi-slot-game
+# Sloth-game
 
 ## About
 pixi-slot-game is a thesis project implementing a visually rich and modern slot machine game using the PixiJS library. The game simulates slot reels, betting, balance tracking, and key statistics like RTP (Return to Player).
