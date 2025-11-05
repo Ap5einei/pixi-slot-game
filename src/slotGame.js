@@ -1,4 +1,3 @@
-import * as PIXI from 'pixi.js';
 import { Reel } from './reel.js';
 
 export class SlotGame {
@@ -11,83 +10,45 @@ export class SlotGame {
     this.rows = 3;
     this.cols = 5;
     this.isSpinning = false;
-
-    // UI
-    this.rtpText = new PIXI.Text({
-      text: 'RTP: 0%',
-      style: new PIXI.TextStyle({ fontSize: 24, fill: 'white' }),
-    });
-    this.rtpText.position.set(10, 10);
-    this.app.stage.addChild(this.rtpText);
-
-    this.balanceText = new PIXI.Text({
-      text: `Saldo: ${this.balance.toFixed(2)}€`,
-      style: new PIXI.TextStyle({ fontSize: 24, fill: 'white' }),
-    });
+    this.balanceText = new PIXI.Text('', { fontSize: 24, fill: 'white' });
     this.balanceText.position.set(10, 40);
     this.app.stage.addChild(this.balanceText);
+    this.updateBalanceDisplay();
   }
 
   init() {
-    for (let col = 0; col < this.cols; col++) {
-      const reel = new Reel(this.symbols, this.rows, 100, 120);
-      reel.container.x = col * 120;
+    for(let c=0; c<this.cols; c++) {
+      const reel = new Reel(this.symbols, this.rows);
+      reel.container.x = c * 120;
       reel.container.y = 150;
       this.app.stage.addChild(reel.container);
       this.reels.push(reel);
     }
   }
 
-  setBet(amount) {
-    if (!this.isSpinning && amount > 0 && amount <= this.balance) {
-      this.bet = amount;
-    }
-  }
-
   async spin() {
-    if (this.isSpinning) return;
-    if (this.bet > this.balance) {
-      alert('Ei tarpeeksi saldoa!');
-      return;
-    }
+    if(this.isSpinning || this.bet > this.balance) return;
     this.isSpinning = true;
     this.balance -= this.bet;
     this.updateBalanceDisplay();
 
-    // Arvo lopputulokset jokaiselle kelalle
-    const results = [];
-    for (let i = 0; i < this.cols; i++) {
-      results[i] = Array.from({ length: this.rows }, () => this.symbols[Math.floor(Math.random() * this.symbols.length)]);
-    }
-
-    await Promise.all(
-      this.reels.map((reel, i) => reel.spin(results[i]))
-    );
-
-    // Palkintojen jako
-    let winAmount = 0;
-    const paylines = [
-      [0, 0, 0, 0, 0],
-      [1, 1, 1, 1, 1],
-      [2, 2, 2, 2, 2],
-    ];
-
-    paylines.forEach((line) => {
-      const lineSymbols = line.map((row, col) => results[col][row]);
-      if (lineSymbols.every((s) => s === lineSymbols[0])) {
-        winAmount += this.bet * 5;
-      }
+    const response = await fetch('http://localhost:5000/api/spin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json'},
+      body: JSON.stringify({ bet: this.bet }),
     });
+    const data = await response.json();
 
-    if (winAmount > 0) {
-      this.balance += winAmount;
-      this.updateBalanceDisplay();
+    for(let i=0; i<this.cols; i++) {
+      await this.reels[i].spin(data.result[i]);
     }
 
+    this.balance += data.win;
+    this.updateBalanceDisplay();
     this.isSpinning = false;
   }
 
   updateBalanceDisplay() {
-    this.balanceText.text = `Saldo: ${this.balance.toFixed(2)}€`;
+    this.balanceText.text = `Saldo: ${this.balance}€`;
   }
 }
