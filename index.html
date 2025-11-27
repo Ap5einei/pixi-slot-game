@@ -1,26 +1,28 @@
 <!DOCTYPE html>
 <html lang="fi">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PixiJS Slot Machine</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/src/style.css">
+  <script type="module" src="https://unpkg.com/pixi.js@8/dist/pixi.mjs"></script>
 </head>
 <body>
   <div id="game-container">
     <div id="pixi-container"></div>
     <div id="ui">
       <div class="info-row">
-        <label for="bet-input">Panos (€):</label>
+        <label for="bet-input">Panos:</label>
         <button id="bet-dec">-</button>
-        <input id="bet-input" type="number" value="10" min="1" step="1" readonly />
+        <input id="bet-input" type="number" value="10" readonly>
         <button id="bet-inc">+</button>
       </div>
       <div class="info-row">
-        <button id="spin-btn">Pyöritä</button>
+        <button id="spin-btn">PYÖRITÄ</button>
       </div>
       <div class="info-row">
         <span id="balance-label">Saldo: 1000€</span>
-        <span id="rtp-label">RTP: 0%</span>
+        <span id="rtp-label">RTP: 96%</span>
       </div>
     </div>
   </div>
