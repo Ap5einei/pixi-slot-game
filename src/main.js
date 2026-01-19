@@ -1,185 +1,174 @@
+import { Application, Container, Graphics } from 'pixi.js';
 import * as PIXI from 'pixi.js';
-import { secureRandomInt } from './rng.js';
+import { loadSymbolTextures, SYMBOL_LIST } from './symbols.js';
+import { Reel } from './reel.js';
+import { audioManager } from './audio.js';
 
-const COLS = 5;
-const ROWS = 3;
-const TILE_SIZE = 110;
+const REEL_COUNT = 5;
+const SYMBOL_SIZE = 120;
+const REEL_GAP = 10;
 
-const symbols = ['🍒','🍋','🍉','⭐','💎','🍇','🔔','7️⃣','🍊','🍍'];
-
-let balance = 1000;
-let bet = 10;
-let isSpinning = false;
-let reels = [];
 let app;
-let winLinesContainer;
+let reels = [];
+let balance = 1000;
+let betAmount = 1;
+let isSpinning = false;
 
-const symbolStyle = new PIXI.TextStyle({
-  fontSize: 82,
-  fill: '#fff534',
-  fontWeight: 'bold',
-  stroke: { color: '#1a1a1a', width: 6 },
-  dropShadow: true,
-  dropShadowColor: '#301e00',
-  dropShadowBlur: 4,
-  dropShadowAngle: Math.PI / 6,
-  dropShadowDistance: 5,
-});
+const BET_LEVELS = [0.50, 1, 2, 5, 10, 20];
+let currentBetIndex = 1;
 
-async function start() {
-  const pixiContainer = document.getElementById('pixi-container');
-  app = new PIXI.Application();
-  await app.init({
-    width: COLS * TILE_SIZE + 200,
-    height: ROWS * TILE_SIZE + 120,
-    backgroundColor: 0x181818,
-  });
-  pixiContainer.appendChild(app.canvas);
-
-  winLinesContainer = new PIXI.Container();
-  winLinesContainer.zIndex = 100;
-  app.stage.addChild(winLinesContainer);
-
-  const reelsTotalWidth = COLS * TILE_SIZE;
-  const offsetX = (app.renderer.width - reelsTotalWidth) / 2 + 40;
-  const offsetY = 30;
-
-  for (let c = 0; c < COLS; c++) {
-    const reelContainer = new PIXI.Container();
-    reelContainer.x = offsetX + c * TILE_SIZE;
-    reelContainer.y = offsetY;
+async function init() {
+    // Luo Pixi-sovellus
+    app = new Application();
+    await app.init({
+        width: REEL_COUNT * (SYMBOL_SIZE + REEL_GAP) - REEL_GAP,
+        height: SYMBOL_SIZE * 3,
+        backgroundColor: 0x1a1a2e,
+        antialias: true
+    });
+    
+    document.getElementById('game-container').appendChild(app.canvas);
+    
+    // Lataa tekstuurit
+    const textures = await loadSymbolTextures(PIXI);
+    
+    // Luo rullakontti maskilla
+    const reelContainer = new Container();
     app.stage.addChild(reelContainer);
-
-    const mask = new PIXI.Graphics()
-      .rect(0, 0, TILE_SIZE, ROWS * TILE_SIZE)
-      .fill(0xffffff);
-    reelContainer.addChild(mask);
+    
+    // Maski näkyvälle alueelle
+    const mask = new Graphics();
+    mask.rect(0, 0, app.screen.width, SYMBOL_SIZE * 3);
+    mask.fill(0xffffff);
     reelContainer.mask = mask;
-
-    const column = [];
-    for (let i = 0; i < ROWS + 1; i++) {
-      const text = new PIXI.Text({
-        text: symbols[secureRandomInt(symbols.length)],
-        style: symbolStyle,
-      });
-      text.anchor.set(0.5, 0);
-      text.x = TILE_SIZE / 2;
-      text.y = i * TILE_SIZE;
-      reelContainer.addChild(text);
-      column.push(text);
+    reelContainer.addChild(mask);
+    
+    // Luo rullat
+    for (let i = 0; i < REEL_COUNT; i++) {
+        const reel = new Reel(textures, SYMBOL_SIZE);
+        reel.container.x = i * (SYMBOL_SIZE + REEL_GAP);
+        reelContainer.addChild(reel.container);
+        reels.push(reel);
     }
-    reels.push(column);
-  }
-
-  document.getElementById('spin-btn').addEventListener('click', spin);
-  document.getElementById('bet-dec').addEventListener('click', () => {
-    if (bet > 1) { bet--; updateUI(); }
-  });
-  document.getElementById('bet-inc').addEventListener('click', () => {
-    if ((bet + 1) * 10 <= balance) { bet++; updateUI(); }
-  });
-
-  updateUI();
+    
+    // Lataa äänet
+    loadSounds();
+    
+    // Tapahtumakuuntelijat
+    setupEventListeners();
+    
+    updateUI();
 }
 
-function spin() {
-  if (isSpinning || bet > balance) return;
+function loadSounds() {
+    audioManager.load('spin', '/assets/sounds/spin.mp3');
+    audioManager.load('stop', '/assets/sounds/stop.mp3');
+    audioManager.load('click', '/assets/sounds/click.mp3');
+    audioManager.load('win', '/assets/sounds/win.mp3');
+    audioManager.load('bigwin', '/assets/sounds/bigwin.mp3');
+    audioManager.load('coin', '/assets/sounds/coin.mp3');
+}
 
-  isSpinning = true;
-  balance -= bet;
-  updateUI();
-
-  const spinDuration = 1500;
-  const speed = 60;
-  const startTime = performance.now();
-
-  function animateSpin(now) {
-    const elapsed = now - startTime;
-
-    for (let c = 0; c < COLS; c++) {
-      for (let i = 0; i < ROWS + 1; i++) {
-        const tile = reels[c][i];
-        tile.y += speed;
-        if (tile.y >= ROWS * TILE_SIZE) {
-          tile.y -= (ROWS + 1) * TILE_SIZE;
-          tile.text = symbols[secureRandomInt(symbols.length)];
+function setupEventListeners() {
+    document.getElementById('spin-btn').addEventListener('click', handleSpin);
+    
+    document.getElementById('bet-up').addEventListener('click', () => {
+        audioManager.play('click');
+        if (currentBetIndex < BET_LEVELS.length - 1) {
+            currentBetIndex++;
+            betAmount = BET_LEVELS[currentBetIndex];
+            updateUI();
         }
-      }
+    });
+    
+    document.getElementById('bet-down').addEventListener('click', () => {
+        audioManager.play('click');
+        if (currentBetIndex > 0) {
+            currentBetIndex--;
+            betAmount = BET_LEVELS[currentBetIndex];
+            updateUI();
+        }
+    });
+    
+    document.getElementById('mute-btn').addEventListener('click', () => {
+        const muted = audioManager.toggleMute();
+        document.getElementById('mute-btn').textContent = muted ? '🔇' : '🔊';
+    });
+    
+    // Kaikki napit soittavat click-äänen
+    document.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('mousedown', () => audioManager.play('click'));
+    });
+}
+
+async function handleSpin() {
+    if (isSpinning) return;
+    if (balance < betAmount) {
+        alert('Saldo ei riitä!');
+        return;
     }
-
-    if (elapsed < spinDuration) {
-      requestAnimationFrame(animateSpin);
-      return;
-    }
-
-    stopSpin();
-  }
-
-  async function stopSpin() {
+    
+    isSpinning = true;
+    balance -= betAmount;
+    updateUI();
+    
+    document.getElementById('spin-btn').disabled = true;
+    document.getElementById('win-display').textContent = '';
+    
+    audioManager.play('click');
+    audioManager.playLoop('spin');
+    
     try {
-      const response = await fetch('http://localhost:5000/api/spin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bet, reels: COLS, rows: ROWS }),
-      });
-      if (!response.ok) throw new Error('HTTP ' + response.status);
-
-      const data = await response.json();
-      console.log('BACKEND TULOS:', data);
-
-      for (let col = 0; col < COLS; col++) {
-        for (let row = 0; row < ROWS; row++) {
-          const tile = reels[col][row];
-          tile.y = row * TILE_SIZE;
-          tile.text = data.result[row][col];
+        // Hae tulos backendistä
+        const response = await fetch('/api/spin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bet: betAmount })
+        });
+        
+        const result = await response.json();
+        
+        // Pyöritä rullat
+        const spinPromises = reels.map((reel, i) => 
+            reel.spin(result.reels[i], i * 200)
+        );
+        
+        await Promise.all(spinPromises);
+        
+        audioManager.stop('spin');
+        audioManager.play('stop');
+        
+        // Käsittele voitto
+        if (result.win_amount > 0) {
+            balance += result.win_amount;
+            
+            if (result.win_amount >= betAmount * 20) {
+                audioManager.play('bigwin');
+            } else {
+                audioManager.play('win');
+            }
+            
+            setTimeout(() => audioManager.play('coin'), 300);
+            
+            document.getElementById('win-display').textContent = 
+                `VOITTO: ${result.win_amount.toFixed(2)} €`;
         }
-        const last = reels[col][ROWS];
-        last.y = ROWS * TILE_SIZE;
-        last.text = symbols[secureRandomInt(symbols.length)];
-      }
-
-      balance += data.win;
-      drawWinLines(data.winningLines || []);
-      updateUI();
-    } catch (err) {
-      console.error('Backend error:', err);
-      balance += bet;
-      updateUI();
+        
+        updateUI();
+        
+    } catch (error) {
+        console.error('Spin error:', error);
+        audioManager.stop('spin');
     }
-
+    
     isSpinning = false;
-  }
-
-  requestAnimationFrame(animateSpin);
-}
-
-function drawWinLines(winningLines) {
-  if (!winLinesContainer) return;
-  winLinesContainer.removeChildren();
-
-  console.log('Piirrän voittolinjat:', winningLines);
-
-  winningLines.forEach((line, index) => {
-    if (line.rowIndex !== undefined) {
-      const g = new PIXI.Graphics();
-      
-      // PIXIJS V8: TÄMÄ TOIMII
-      const y = line.rowIndex * TILE_SIZE + TILE_SIZE / 2 + 30;
-      g.moveTo(10, y);
-      g.lineTo(app.renderer.width - 30, y);
-      g.stroke({ width: 10, color: 0xffff00, alpha: 1.0 });  // ← PUUTTI TÄMÄ!
-      
-      winLinesContainer.addChild(g);
-      console.log(`✅ Piirretty viiva rivi ${line.rowIndex}`);
-    }
-  });
+    document.getElementById('spin-btn').disabled = false;
 }
 
 function updateUI() {
-  document.getElementById('balance-label').textContent = `Saldo: ${balance}€`;
-  document.getElementById('bet-input').value = bet;
-  const rtpLabel = document.getElementById('rtp-label');
-  if (rtpLabel) rtpLabel.textContent = 'RTP: 96%';
+    document.getElementById('balance').textContent = balance.toFixed(2);
+    document.getElementById('bet').textContent = betAmount.toFixed(2);
 }
 
-start();
+// Käynnistä peli
+init();

@@ -1,31 +1,25 @@
 <!DOCTYPE html>
 <html lang="fi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PixiJS Slot Machine</title>
-  <link rel="stylesheet" href="/src/style.css">
-  <script type="module" src="https://unpkg.com/pixi.js@8/dist/pixi.mjs"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixi Slot Game</title>
+    <script type="module" src="/src/main.js"></script>  <!-- ← VITE ETSII TÄÄLTÄ -->
 </head>
 <body>
-  <div id="game-container">
-    <div id="pixi-container"></div>
-    <div id="ui">
-      <div class="info-row">
-        <label for="bet-input">Panos:</label>
-        <button id="bet-dec">-</button>
-        <input id="bet-input" type="number" value="10" readonly>
-        <button id="bet-inc">+</button>
-      </div>
-      <div class="info-row">
-        <button id="spin-btn">PYÖRITÄ</button>
-      </div>
-      <div class="info-row">
-        <span id="balance-label">Saldo: 1000€</span>
-        <span id="rtp-label">RTP: 96%</span>
-      </div>
+    <div class="info-panel">
+        <div class="info-item">Saldo: <span id="balance">1000.00</span> €</div>
+        <div class="info-item">Panos: <span id="bet">1.00</span> €</div>
     </div>
-  </div>
-  <script type="module" src="/src/main.js"></script>
+    
+    <div id="game-container"></div>
+    <div id="win-display"></div>
+    
+    <div class="controls">
+        <button id="bet-down">-</button>
+        <button id="spin-btn">PYÖRITÄ</button>
+        <button id="bet-up">+</button>
+        <button id="mute-btn">🔊</button>
+    </div>
 </body>
 </html>
