@@ -12,5 +12,16 @@ export async function spin(bet) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ bet })
   });
-  return res.json();
+  
+  const result = await res.json();
+  
+  console.log('🎰 SPIN TULOS:', {
+    bet: bet,
+    reels: result.reels,
+    wins: result.wins || [],
+    win_amount: result.win_amount?.toFixed(2) + '€' || '0€',
+    total_lines: 5
+  });
+  
+  return result;
 }
