@@ -3,7 +3,7 @@ import secrets
 
 SYMBOLS = {
     0: {'name': 'cherry',  'weight': 30, 'payout': 1.5},  #27,3%
-    1: {'name': 'lemon',   'weight': 25, 'payout': 2.1},  #22.7%
+    1: {'name': 'lemon',   'weight': 25, 'payout': 2.0},  #22.7%
     2: {'name': 'orange',  'weight': 20, 'payout': 4},  #18.2%
     3: {'name': 'grape',   'weight': 15, 'payout': 6},  #13.6%
     4: {'name': 'bell',    'weight': 10, 'payout': 10}, #9.1%
